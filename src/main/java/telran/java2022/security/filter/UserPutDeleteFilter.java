@@ -14,15 +14,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
-import telran.java2022.accounting.dao.UserAccountRepository;
-import telran.java2022.accounting.model.UserAccount;
+import telran.java2022.security.context.SecurityContext;
+import telran.java2022.security.context.User;
 
 @Component
 @Order(30)
 @RequiredArgsConstructor
 public class UserPutDeleteFilter implements Filter {
 
-	final UserAccountRepository userAccountRepository;
+	final SecurityContext context;
 
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain)
@@ -32,8 +32,8 @@ public class UserPutDeleteFilter implements Filter {
 		String path = request.getServletPath();
 		
 		if (checkEndPoint(path) && "DELETE".equals(request.getMethod())) {
-			UserAccount userAccount = userAccountRepository.findById(request.getUserPrincipal().getName()).get();
-			String userString = ".+/"+userAccount.getLogin()+"/?";
+			User userAccount = context.getUser(request.getUserPrincipal().getName());
+			String userString = ".+/"+userAccount.getUserName()+"/?";
 			if (!path.matches(userString) && !userAccount.getRoles().contains("Administrator".toUpperCase())) {
 				response.sendError(403);
 				return;
@@ -41,8 +41,8 @@ public class UserPutDeleteFilter implements Filter {
 		}
 
 		if (checkEndPoint(path) && "PUT".equals(request.getMethod())) {
-			UserAccount userAccount = userAccountRepository.findById(request.getUserPrincipal().getName()).get();
-			String userString = ".+/"+userAccount.getLogin()+"/?";
+			User userAccount = context.getUser(request.getUserPrincipal().getName());
+			String userString = ".+/"+userAccount.getUserName()+"/?";
 			if (!path.matches(userString)) {
 				response.sendError(403);
 				return;

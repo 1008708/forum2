@@ -15,17 +15,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import lombok.RequiredArgsConstructor;
-import telran.java2022.accounting.dao.UserAccountRepository;
-import telran.java2022.accounting.model.UserAccount;
 import telran.java2022.post.dao.PostRepository;
 import telran.java2022.post.model.Post;
+import telran.java2022.security.context.SecurityContext;
+import telran.java2022.security.context.User;
 
 @Component
 @Order(40)
 @RequiredArgsConstructor
 public class PostFilter implements Filter {
 
-	final UserAccountRepository userAccountRepository;
+	final SecurityContext context;
 	final PostRepository postRepository;
 
 	@Override
@@ -36,9 +36,9 @@ public class PostFilter implements Filter {
 		String path = request.getServletPath();
 
 		if (checkEndPoint(path)) {
-			UserAccount userAccount = userAccountRepository.findById(request.getUserPrincipal().getName()).get();
+			User userAccount = context.getUser(request.getUserPrincipal().getName());
 			if ("POST".equals(request.getMethod())) {
-				if (!path.matches(".+post/" + userAccount.getLogin() + "/?")) {
+				if (!path.matches(".+post/" + userAccount.getUserName() + "/?")) {
 					response.sendError(403);
 					return;
 				}
@@ -47,7 +47,7 @@ public class PostFilter implements Filter {
 					&& !userAccount.getRoles().contains("MODERATOR")) {
 				String id = path.substring(path.lastIndexOf("post/") + 5);
 				Post post = postRepository.findById(id).orElse(null);
-				if (post != null && !post.getAuthor().equals(userAccount.getLogin())) {
+				if (post != null && !post.getAuthor().equals(userAccount.getUserName())) {
 					response.sendError(403);
 					return;
 				}
@@ -56,14 +56,14 @@ public class PostFilter implements Filter {
 			if ("PUT".equals(request.getMethod()) && !path.contains("comment")) {
 					String id = path.substring(path.lastIndexOf("post/") + 5);
 					Post post = postRepository.findById(id).orElse(null);
-					if (post != null && !post.getAuthor().equals(userAccount.getLogin())) {
+					if (post != null && !post.getAuthor().equals(userAccount.getUserName())) {
 						response.sendError(403);
 						return;
 					}
 				} 
-			if ("PUT".equals(request.getMethod()) && path.contains("comment") && (!path.matches(".+/" + userAccount.getLogin() + "/?"))) {
-					response.sendError(403);
-					return;
+			if ("PUT".equals(request.getMethod()) && path.contains("comment") && (!path.matches(".+/" + userAccount.getUserName() + "/?"))) {
+				response.sendError(403);
+				return;
 			}
 		}
 		chain.doFilter(request, response);
