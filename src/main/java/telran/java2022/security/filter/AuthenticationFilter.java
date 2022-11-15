@@ -41,17 +41,13 @@ public class AuthenticationFilter implements Filter {
 		
 		if (checkEndPoint(request.getMethod(), request.getServletPath())) {
 			String sessionId = request.getSession().getId();
-
-			UserAccount userAccount;
-//			UserAccount userAccount = sessionService.getUser(sessionId);
-//			if (userAccount == null) {
-			
-			String token = request.getHeader("Authorization");
-			if (token == null && sessionService.getUser(sessionId) == null) {
-				response.sendError(401);
-				return;
-			}				
-			if (token != null) {
+			UserAccount userAccount = sessionService.getUser(sessionId);	
+			if (userAccount == null) {
+				String token = request.getHeader("Authorization");
+				if (token == null) {
+					response.sendError(401);
+					return;
+				}				
 				String[] credentials;
 				try {
 					credentials = getCredentialsFromToken(token);
@@ -65,8 +61,6 @@ public class AuthenticationFilter implements Filter {
 					return;
 				}
 				sessionService.addUser(sessionId, userAccount);
-			} else {
-				userAccount = sessionService.getUser(sessionId);
 			}
 			request = new WrapperRequest(request, userAccount.getLogin());
 			User user = User.builder()
